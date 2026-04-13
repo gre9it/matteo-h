@@ -1,40 +1,30 @@
-/**
- * ressource.js
- * Affichage dynamique des champs spécifiques (Livre / Document)
- * selon le <select> choisi dans le formulaire de création/édition.
- */
-(function () {
-    'use strict';
+function afficherChamps(idLivre, idDoc) {
+    var type = document.getElementById("typeSelect").value;
+    document.getElementById(idLivre).style.display = type === "livre"    ? "block" : "none";
+    document.getElementById(idDoc).style.display   = type === "document" ? "block" : "none";
+}
 
-    var typeSelect      = document.getElementById('typeRessource');
-    var livreFields     = document.getElementById('livreFields');
-    var documentFields  = document.getElementById('documentFields');
+function filtrerRessources() {
+    var texte    = document.getElementById("filtreRessource").value.toLowerCase().trim();
+    var type     = document.getElementById("filtreTypeRessource").value;
+    var lignes   = document.querySelectorAll("#tableRessources tbody tr");
+    var count    = 0;
 
-    function showFields(type) {
-        if (!livreFields || !documentFields) return;
+    lignes.forEach(function(ligne) {
+        var search    = (ligne.dataset.search || "").toLowerCase().trim();
+        var ligneType = (ligne.dataset.type   || "").trim();
+        var texteOk   = !texte || search.includes(texte);
+        var typeOk    = !type  || ligneType === type;
+        var visible   = texteOk && typeOk;
+        ligne.style.display = visible ? "" : "none";
+        if (visible) count++;
+    });
 
-        if (type === 'Livre') {
-            livreFields.classList.remove('hidden');
-            documentFields.classList.add('hidden');
-        } else if (type === 'Document') {
-            livreFields.classList.add('hidden');
-            documentFields.classList.remove('hidden');
-        } else {
-            livreFields.classList.add('hidden');
-            documentFields.classList.add('hidden');
-        }
-    }
+    document.getElementById("compteurRessources").textContent = count;
+}
 
-    // Édition : currentType est injecté inline dans la JSP
-    if (typeof currentType !== 'undefined' && currentType !== '') {
-        showFields(currentType);
-    }
-
-    if (typeSelect) {
-        typeSelect.addEventListener('change', function () {
-            showFields(this.value);
-        });
-        // Applique l'état initial si une valeur est déjà sélectionnée
-        showFields(typeSelect.value);
-    }
-}());
+function resetFiltresRessources() {
+    document.getElementById("filtreRessource").value     = "";
+    document.getElementById("filtreTypeRessource").value = "";
+    filtrerRessources();
+}

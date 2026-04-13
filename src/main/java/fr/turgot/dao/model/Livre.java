@@ -1,35 +1,21 @@
 package fr.turgot.dao.model;
 
-import jakarta.persistence.*;
-import java.time.LocalDate;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+import jakarta.persistence.PrimaryKeyJoinColumn;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "livres")
-@PrimaryKeyJoinColumn(name = "ressource_id")
+@Table(name = "livre")
+@PrimaryKeyJoinColumn(name = "id")
 @DiscriminatorValue("Livre")
 public class Livre extends Ressource {
 
-    @Column(name = "genre", length = 100)
     private String genre;
-
-    @Column(name = "edition", length = 100)
     private String edition;
 
-    public Livre() {}
-
-    public Livre(String title, String description, LocalDate dateParution, String auteur,
-                 int availableCopies, String genre, String edition) {
-        super(title, description, dateParution, auteur, availableCopies);
-        this.genre = genre;
-        this.edition = edition;
-    }
-
-    @Override
-    public String getType() { return "Livre"; }
-
     public String getGenre() { return genre; }
-    public void setGenre(String genre) { this.genre = genre; }
-
     public String getEdition() { return edition; }
-    public void setEdition(String edition) { this.edition = edition; }
+    public void setGenre(String g) { this.genre = g; }
+    public void setEdition(String e) { this.edition = e; }
 }

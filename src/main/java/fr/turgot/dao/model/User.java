@@ -1,43 +1,45 @@
 package fr.turgot.dao.model;
 
-import jakarta.persistence.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "users")
+@Table(name = "user")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
-    @Column(name = "username", unique = true, nullable = false, length = 100)
+    @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(name = "password", nullable = false)
+    @Column(nullable = false)
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 20)
-    private Role role;
+    @Column(nullable = false)
+    private Role role = Role.ETUDIANT;
 
-    public User() {}
+    public enum Role { ETUDIANT, PROFESSEUR, BIBLIOTHECAIRE, ADMIN }
 
-    public User(String username, String password, Role role) {
-        this.username = username;
-        this.password = password;
-        this.role = role;
-    }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
+    
+    public int getId() { return id; }
     public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
     public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
     public Role getRole() { return role; }
+    
+    public void setUsername(String username) { this.username = username; }
+    public void setPassword(String password) { this.password = password; }
     public void setRole(Role role) { this.role = role; }
 }

@@ -1,19 +1,38 @@
 package fr.turgot.utils;
 
-/**
- * Utilitaire centralisant les chemins vers les vues JSP protégées.
- */
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 public class LinkHelper {
 
-    private static final String JSP_BASE = "/WEB-INF/jsp/";
+    public static final String JSP_ROOT = "/WEB-INF/jsp/";
 
-    public static final String LOGIN_VIEW       = JSP_BASE + "login.jsp";
-    public static final String REGISTER_VIEW    = JSP_BASE + "register.jsp";
-    public static final String REGISTER_SUCCESS = JSP_BASE + "register-success.jsp";
-    public static final String CATALOGUE_VIEW   = JSP_BASE + "catalogue.jsp";
-    public static final String DASHBOARD_VIEW   = JSP_BASE + "dashboard.jsp";
-    public static final String RESSOURCE_FORM   = JSP_BASE + "ressource-form.jsp";
-    public static final String ERROR_VIEW       = JSP_BASE + "error.jsp";
+    /**
+     * Génère le lien vers une JSP dans WEB-INF/jsp ou ses sous-dossiers
+     */
+    public static String jspLink(String relativePath) {
+        return "page?path=" + relativePath; // relativePath = authentification/login
+    }
 
-    private LinkHelper() {}
+    /**
+     * Liste toutes les JSP dans un dossier et ses sous-dossiers
+     */
+    public static List<String> listAllJSP(String webappRoot) {
+        List<String> pages = new ArrayList<>();
+        File rootDir = new File(webappRoot + JSP_ROOT);
+        scanDirectory(rootDir, "", pages);
+        return pages;
+    }
+
+    private static void scanDirectory(File dir, String pathPrefix, List<String> pages) {
+        for (File file : dir.listFiles()) {
+            if (file.isDirectory()) {
+                scanDirectory(file, pathPrefix + file.getName() + "/", pages);
+            } else if (file.getName().endsWith(".jsp")) {
+                String name = file.getName().replace(".jsp", "");
+                pages.add(pathPrefix + name); // ex: authentification/login
+            }
+        }
+    }
 }

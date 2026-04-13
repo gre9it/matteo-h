@@ -1,5 +1,7 @@
 package fr.turgot;
 
+import java.io.IOException;
+
 import fr.turgot.dao.UserDAO;
 import fr.turgot.dao.model.User;
 import fr.turgot.utils.LinkHelper;
@@ -9,55 +11,55 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.mindrot.jbcrypt.BCrypt;
 
-import java.io.IOException;
-import java.util.Optional;
-
-@WebServlet("/login")
+@WebServlet("/AuthentificationServlet")
 public class AuthentificationServlet extends HttpServlet {
 
-    private final UserDAO userDAO = new UserDAO();
+    public static final String JSP_ROOT_AUTH = LinkHelper.JSP_ROOT + "authentification/";
+    private final UserDAO dao = new UserDAO();
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-        // Si déjà connecté, rediriger
-        HttpSession session = req.getSession(false);
-        if (session != null && session.getAttribute("connectedUser") != null) {
-            resp.sendRedirect(req.getContextPath() + "/");
-            return;
-        }
-        req.getRequestDispatcher(LinkHelper.LOGIN_VIEW).forward(req, resp);
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    throws ServletException, IOException {
+        getServletContext()
+            .getRequestDispatcher(JSP_ROOT_AUTH + "authentification.jsp")
+            .forward(request, response);
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String username = req.getParameter("username");
-        String password = req.getParameter("password");
+        String login = request.getParameter("username");
+        String mdp = request.getParameter("password");
 
-        if (username == null || username.isBlank() || password == null || password.isBlank()) {
-            req.setAttribute("errorMessage", "Veuillez renseigner tous les champs.");
-            req.getRequestDispatcher(LinkHelper.LOGIN_VIEW).forward(req, resp);
-            return;
+        StringBuilder messageErreur = new StringBuilder();
+
+        // Validation des champs
+        if (login == null || login.trim().isEmpty()) {
+            messageErreur.append("Login manquant.<br>");
+        }
+        if (mdp == null || mdp.trim().isEmpty()) {
+            messageErreur.append("Mot de passe manquant.<br>");
         }
 
-        Optional<User> optUser = userDAO.findByUsername(username.trim());
+        if (messageErreur.length() > 0) {
+            request.setAttribute("errors", messageErreur.toString());
+            getServletContext().getRequestDispatcher(JSP_ROOT_AUTH + "authechec.jsp").forward(request, response);
+        } else {
+            
+            User user = dao.authenticate(login, mdp);
 
-        if (optUser.isEmpty() || !BCrypt.checkpw(password, optUser.get().getPassword())) {
-            req.setAttribute("errorMessage", "Identifiants incorrects.");
-            req.setAttribute("lastUsername", username);
-            req.getRequestDispatcher(LinkHelper.LOGIN_VIEW).forward(req, resp);
-            return;
+            if (user == null) {
+                messageErreur.append("Login ou mot de passe incorrect");
+                request.setAttribute("error", messageErreur.toString());
+                getServletContext().getRequestDispatcher(JSP_ROOT_AUTH + "authentification.jsp").forward(request, response);
+            } else {
+                HttpSession session = request.getSession(true);
+                session.setAttribute("connectedUser", user);
+                getServletContext().getRequestDispatcher(JSP_ROOT_AUTH + "authsuccess.jsp").forward(request, response);
+            }
         }
-
-        User user = optUser.get();
-        HttpSession session = req.getSession(true);
-        session.setAttribute("connectedUser", user);
-        session.setMaxInactiveInterval(30 * 60); // 30 minutes
-
-        resp.sendRedirect(req.getContextPath() + "/");
     }
+
 }

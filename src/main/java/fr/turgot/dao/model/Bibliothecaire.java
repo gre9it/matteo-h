@@ -1,25 +1,22 @@
 package fr.turgot.dao.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.PrimaryKeyJoinColumn;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "bibliothecaires")
-@PrimaryKeyJoinColumn(name = "user_id")
+@Table(name = "bibliothecaire")
+@PrimaryKeyJoinColumn(name = "id")
 public class Bibliothecaire extends User {
 
-    @Column(name = "bureau", length = 50)
+    @Column(name = "bureau")
     private String bureau;
 
     public Bibliothecaire() {
-        super();
-        setRole(Role.BIBLIOTHECAIRE);
-    }
-
-    public Bibliothecaire(String username, String password, String bureau) {
-        super(username, password, Role.BIBLIOTHECAIRE);
-        this.bureau = bureau;
+        this.setRole(Role.BIBLIOTHECAIRE);
     }
 
     public String getBureau() { return bureau; }
-    public void setBureau(String bureau) { this.bureau = bureau; }
+    public void setBureau(String b) { this.bureau = b; }
 }

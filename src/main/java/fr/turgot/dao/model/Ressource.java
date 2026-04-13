@@ -1,81 +1,64 @@
 package fr.turgot.dao.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorColumn;
+import jakarta.persistence.DiscriminatorType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.Table;
+
 @Entity
-@Table(name = "ressources")
+@Table(name = "ressource")
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
-public abstract class Ressource {
+
+public class Ressource {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(nullable = false)
     private String title;
 
-    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "date_parution")
     private LocalDate dateParution;
 
-    @Column(name = "auteur", length = 200)
     private String auteur;
 
-    @Column(name = "available_copies", nullable = false)
     private int availableCopies;
 
-    public Ressource() {}
 
-    public Ressource(String title, String description, LocalDate dateParution, String auteur, int availableCopies) {
-        this.title = title;
-        this.description = description;
-        this.dateParution = dateParution;
-        this.auteur = auteur;
-        this.availableCopies = availableCopies;
-    }
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public LocalDate getDateParution() { return dateParution; }
+    public String getAuteur() { return auteur; }
+    public int getAvailableCopies() { return availableCopies; }
 
-    /**
-     * Emprunte un exemplaire. Retourne false si aucun exemplaire disponible.
-     */
-    public boolean borrow() {
-        if (availableCopies > 0) {
-            availableCopies--;
-            return true;
+
+    public void setTitle(String title) { this.title = title; }
+    public void setDescription(String description) { this.description = description; }
+    public void setDateParution(LocalDate dateParution) { this.dateParution = dateParution; }
+    public void setAuteur(String auteur) { this.auteur = auteur; }
+    public void setAvailableCopies(int availableCopies) { this.availableCopies = availableCopies; }
+
+    public void borrow() {
+        if (availableCopies == 0) {
+            throw new IllegalStateException("No copies available");
         }
-        return false;
+        availableCopies--;
     }
 
-    /**
-     * Rend un exemplaire.
-     */
     public void giveBack() {
         availableCopies++;
     }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
-    public LocalDate getDateParution() { return dateParution; }
-    public void setDateParution(LocalDate dateParution) { this.dateParution = dateParution; }
-
-    public String getAuteur() { return auteur; }
-    public void setAuteur(String auteur) { this.auteur = auteur; }
-
-    public int getAvailableCopies() { return availableCopies; }
-    public void setAvailableCopies(int availableCopies) { this.availableCopies = availableCopies; }
-
-    /**
-     * Retourne le type lisible pour l'affichage JSP.
-     */
-    public abstract String getType();
 }

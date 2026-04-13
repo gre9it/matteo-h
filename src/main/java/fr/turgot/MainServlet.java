@@ -1,37 +1,23 @@
 package fr.turgot;
 
-import fr.turgot.dao.model.User;
-import fr.turgot.utils.LinkHelper;
+import java.io.IOException;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
-import java.io.IOException;
-
-/**
- * Servlet principale : redirige vers le catalogue ou le login selon la session.
- */
-@WebServlet("/")
+@WebServlet("/page")
 public class MainServlet extends HttpServlet {
-
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        HttpSession session = req.getSession(false);
-        User user = (session != null) ? (User) session.getAttribute("connectedUser") : null;
-
-        if (user == null) {
-            resp.sendRedirect(req.getContextPath() + "/login");
-            return;
+        String path = request.getParameter("path"); // chemin relatif, ex: authentification/login
+        if (path == null || path.isEmpty()) {
+            path = "authentification/login"; // page par défaut
         }
-
-        switch (user.getRole()) {
-            case BIBLIOTHECAIRE -> resp.sendRedirect(req.getContextPath() + "/ressources");
-            default             -> resp.sendRedirect(req.getContextPath() + "/catalogue");
-        }
+        String jspPath = "/WEB-INF/jsp/" + path + ".jsp";
+        request.getRequestDispatcher(jspPath).forward(request, response);
     }
 }

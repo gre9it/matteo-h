@@ -1,31 +1,18 @@
 package fr.turgot.dao.model;
 
-import jakarta.persistence.*;
-import java.time.LocalDate;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+import jakarta.persistence.PrimaryKeyJoinColumn;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "documents")
-@PrimaryKeyJoinColumn(name = "ressource_id")
+@Table(name = "document")
+@PrimaryKeyJoinColumn(name = "id")
 @DiscriminatorValue("Document")
 public class Document extends Ressource {
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type_document", length = 20)
-    private TypeDocument typeDocument;
+    private String type;
 
-    public Document() {}
-
-    public Document(String title, String description, LocalDate dateParution, String auteur,
-                    int availableCopies, TypeDocument typeDocument) {
-        super(title, description, dateParution, auteur, availableCopies);
-        this.typeDocument = typeDocument;
-    }
-
-    @Override
-    public String getType() {
-        return typeDocument != null ? typeDocument.name() : "Document";
-    }
-
-    public TypeDocument getTypeDocument() { return typeDocument; }
-    public void setTypeDocument(TypeDocument typeDocument) { this.typeDocument = typeDocument; }
+    public String getType() { return type; }
+    public void setType(String t) { this.type = t; }
 }

@@ -1,7 +1,14 @@
 package fr.turgot;
 
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.List;
+
 import fr.turgot.dao.RessourceDAO;
-import fr.turgot.dao.model.*;
+import fr.turgot.dao.model.Document;
+import fr.turgot.dao.model.Livre;
+import fr.turgot.dao.model.Ressource;
+import fr.turgot.dao.model.User;
 import fr.turgot.utils.LinkHelper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -10,146 +17,138 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-import java.io.IOException;
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.List;
-import java.util.Optional;
-
-/**
- * Dashboard CRUD des ressources — réservé au BIBLIOTHECAIRE.
- * Actions : list (défaut), add, edit, delete.
- */
-@WebServlet("/ressources")
+@WebServlet("/RessourceServlet")
 public class RessourceServlet extends HttpServlet {
 
-    private final RessourceDAO ressourceDAO = new RessourceDAO();
+    private static final String JSP_RESSOURCE = LinkHelper.JSP_ROOT + "ressources/ressource.jsp";
+    private final RessourceDAO dao = new RessourceDAO();
+
+    private boolean isBibliothecaire(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        HttpSession session = request.getSession(false);
+        User user = (session != null) ? (User) session.getAttribute("connectedUser") : null;
+
+        if (user == null) {
+            response.sendRedirect(request.getContextPath() + "/index.jsp");
+            return false;
+        }
+        if (user.getRole() != User.Role.BIBLIOTHECAIRE) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès réservé aux bibliothécaires");
+            return false;
+        }
+        return true;
+    }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        if (!isBibliothecaire(request, response))
+            return;
 
-        User user = requireBibliothecaire(req, resp);
-        if (user == null) return;
+        List<Ressource> ressources = dao.findAll();
+        request.setAttribute("ressources", ressources);
+        getServletContext().getRequestDispatcher(JSP_RESSOURCE).forward(request, response);
+    }
 
-        String action = req.getParameter("action");
-        if (action == null) action = "list";
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!isBibliothecaire(request, response))
+            return;
+
+        String action = request.getParameter("action");
 
         switch (action) {
-            case "add" -> {
-                req.getRequestDispatcher(LinkHelper.RESSOURCE_FORM).forward(req, resp);
+
+            case "ajouter" -> {
+                String type = request.getParameter("type");
+                String title = request.getParameter("title");
+                String description = request.getParameter("description");
+                String auteur = request.getParameter("auteur");
+                LocalDate date = parseDate(request);
+                String copiesStr = request.getParameter("availableCopies");
+                int copies = (copiesStr != null && !copiesStr.isEmpty())
+                        ? Integer.parseInt(copiesStr)
+                        : 1;
+
+                boolean succes;
+                if ("livre".equals(type)) {
+                    Livre livre = new Livre();
+                    livre.setTitle(title);
+                    livre.setDescription(description);
+                    livre.setAuteur(auteur);
+                    livre.setDateParution(date);
+                    livre.setAvailableCopies(copies);
+                    livre.setGenre(request.getParameter("genre"));
+                    livre.setEdition(request.getParameter("edition"));
+                    succes = dao.createLivre(livre);
+                } else {
+                    Document doc = new Document();
+                    doc.setTitle(title);
+                    doc.setDescription(description);
+                    doc.setAuteur(auteur);
+                    doc.setDateParution(date);
+                    doc.setAvailableCopies(copies);
+                    doc.setType(request.getParameter("typeDoc"));
+                    succes = dao.createDocument(doc);
+                }
+                request.setAttribute(succes ? "success" : "error",
+                        succes ? "Ressource ajoutée" : "Erreur lors de l'ajout");
             }
-            case "edit" -> {
-                Long id = parseLong(req.getParameter("id"));
-                if (id == null) { resp.sendRedirect(req.getContextPath() + "/ressources"); return; }
-                Optional<Ressource> opt = ressourceDAO.findById(id);
-                if (opt.isEmpty()) { resp.sendRedirect(req.getContextPath() + "/ressources"); return; }
-                req.setAttribute("ressource", opt.get());
-                req.getRequestDispatcher(LinkHelper.RESSOURCE_FORM).forward(req, resp);
+
+            case "chargerModif" -> {
+                int id = Integer.parseInt(request.getParameter("id"));
+                Ressource r = dao.findById(id);
+                request.setAttribute("ressourceAModifier", r);
             }
-            case "delete" -> {
-                Long id = parseLong(req.getParameter("id"));
-                if (id != null) ressourceDAO.delete(id);
-                resp.sendRedirect(req.getContextPath() + "/ressources");
+
+            case "modifier" -> {
+                int id = Integer.parseInt(request.getParameter("id"));
+                String type = request.getParameter("type");
+                LocalDate date = parseDate(request);
+                String copiesStr = request.getParameter("availableCopies");
+                int copies = (copiesStr != null && !copiesStr.isEmpty())
+                        ? Integer.parseInt(copiesStr)
+                        : 0;
+
+                boolean succes = dao.update(id, type,
+                        request.getParameter("title"),
+                        request.getParameter("description"),
+                        request.getParameter("auteur"),
+                        date, copies,
+                        request.getParameter("genre"),
+                        request.getParameter("edition"),
+                        request.getParameter("typeDoc"));
+
+                request.setAttribute(succes ? "success" : "error",
+                        succes ? "Ressource modifiée" : "Erreur lors de la modification");
             }
+
+            case "supprimer" -> {
+                int id = Integer.parseInt(request.getParameter("id"));
+                boolean success = dao.delete(id);
+                request.setAttribute(success ? "success" : "error",
+                        success ? "Ressource supprimée" : "Erreur lors de la suppression");
+            }
+
             default -> {
-                List<Ressource> ressources = ressourceDAO.findAll();
-                req.setAttribute("ressources", ressources);
-                req.getRequestDispatcher(LinkHelper.DASHBOARD_VIEW).forward(req, resp);
-            }
-        }
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-
-        User user = requireBibliothecaire(req, resp);
-        if (user == null) return;
-
-        String action = req.getParameter("action");
-        String type   = req.getParameter("typeRessource"); // "Livre" ou "Document"
-
-        String title        = req.getParameter("title");
-        String description  = req.getParameter("description");
-        String auteur       = req.getParameter("auteur");
-        String dateStr      = req.getParameter("dateParution");
-        String copiesStr    = req.getParameter("availableCopies");
-        String idStr        = req.getParameter("id");
-
-        LocalDate dateParution = null;
-        if (dateStr != null && !dateStr.isBlank()) {
-            try { dateParution = LocalDate.parse(dateStr); } catch (DateTimeParseException ignored) {}
-        }
-
-        int copies = 1;
-        try { copies = Integer.parseInt(copiesStr); } catch (NumberFormatException ignored) {}
-
-        if ("save".equals(action)) {
-            Long id = parseLong(idStr);
-
-            if (id != null) {
-                // Mise à jour
-                Optional<Ressource> opt = ressourceDAO.findById(id);
-                if (opt.isPresent()) {
-                    Ressource r = opt.get();
-                    r.setTitle(title);
-                    r.setDescription(description);
-                    r.setAuteur(auteur);
-                    r.setDateParution(dateParution);
-                    r.setAvailableCopies(copies);
-                    if (r instanceof Livre livre) {
-                        livre.setGenre(req.getParameter("genre"));
-                        livre.setEdition(req.getParameter("edition"));
-                    } else if (r instanceof Document doc) {
-                        doc.setTypeDocument(parseTypeDocument(req.getParameter("typeDocument")));
-                    }
-                    ressourceDAO.update(r);
-                }
-            } else {
-                // Création
-                if ("Livre".equals(type)) {
-                    Livre livre = new Livre(title, description, dateParution, auteur, copies,
-                        req.getParameter("genre"), req.getParameter("edition"));
-                    ressourceDAO.save(livre);
-                } else if ("Document".equals(type)) {
-                    Document doc = new Document(title, description, dateParution, auteur, copies,
-                        parseTypeDocument(req.getParameter("typeDocument")));
-                    ressourceDAO.save(doc);
-                }
+                request.setAttribute("error", "Action inconnue");
             }
         }
 
-        resp.sendRedirect(req.getContextPath() + "/ressources");
+        request.setAttribute("ressources", dao.findAll());
+        getServletContext().getRequestDispatcher(JSP_RESSOURCE).forward(request, response);
     }
 
-    // --- helpers ---
-
-    private User requireBibliothecaire(HttpServletRequest req, HttpServletResponse resp)
-            throws IOException, ServletException {
-        HttpSession session = req.getSession(false);
-        User user = (session != null) ? (User) session.getAttribute("connectedUser") : null;
-        if (user == null) {
-            resp.sendRedirect(req.getContextPath() + "/login");
+    private LocalDate parseDate(HttpServletRequest request) {
+        String anneeStr = request.getParameter("annee");
+        if (anneeStr == null || anneeStr.isEmpty())
             return null;
-        }
-        if (user.getRole() != Role.BIBLIOTHECAIRE) {
-            req.setAttribute("errorMessage", "Accès réservé aux bibliothécaires.");
-            req.getRequestDispatcher(LinkHelper.ERROR_VIEW).forward(req, resp);
-            return null;
-        }
-        return user;
-    }
-
-    private Long parseLong(String s) {
-        if (s == null || s.isBlank()) return null;
-        try { return Long.parseLong(s.trim()); } catch (NumberFormatException e) { return null; }
-    }
-
-    private TypeDocument parseTypeDocument(String s) {
-        if (s == null) return TypeDocument.RAPPORT;
-        try { return TypeDocument.valueOf(s.toUpperCase()); } catch (IllegalArgumentException e) {
-            return TypeDocument.RAPPORT;
-        }
+        int annee = Integer.parseInt(anneeStr);
+        String moisStr = request.getParameter("mois");
+        String jourStr = request.getParameter("jour");
+        int mois = (moisStr != null && !moisStr.isEmpty()) ? Integer.parseInt(moisStr) : 1;
+        int jour = (jourStr != null && !jourStr.isEmpty()) ? Integer.parseInt(jourStr) : 1;
+        return LocalDate.of(annee, mois, jour);
     }
 }

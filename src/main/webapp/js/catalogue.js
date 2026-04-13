@@ -1,61 +1,22 @@
-/**
- * catalogue.js
- * Filtrage dynamique du catalogue (sans rechargement de page).
- * - Filtre par type de ressource (select)
- * - Filtre par texte (titre, auteur, description)
- */
-(function () {
-    'use strict';
+function filtrer() {
+    var type   = document.getElementById("filtreType").value.toLowerCase();
+    var texte  = document.getElementById("filtreTexte").value.toLowerCase();
+    var lignes = document.querySelectorAll("#tableRessources tbody tr");
+    var count  = 0;
 
-    var searchInput  = document.getElementById('searchInput');
-    var typeFilter   = document.getElementById('typeFilter');
-    var resetButton  = document.getElementById('resetFilters');
-    var rows         = document.querySelectorAll('#catalogueBody .catalogue-row');
-    var noResults    = document.getElementById('noResults');
+    lignes.forEach(function(ligne) {
+        var typeOk  = !type  || ligne.dataset.type.toLowerCase() === type;
+        var texteOk = !texte || ligne.dataset.search.includes(texte);
+        var visible = typeOk && texteOk;
+        ligne.style.display = visible ? "" : "none";
+        if (visible) count++;
+    });
 
-    function normalize(str) {
-        if (!str) return '';
-        return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
+    document.getElementById("compteur").textContent = count;
+}
 
-    function applyFilters() {
-        var search    = normalize(searchInput.value.trim());
-        var typeValue = typeFilter.value;
-        var visible   = 0;
-
-        rows.forEach(function (row) {
-            var type        = row.getAttribute('data-type') || '';
-            var title       = normalize(row.getAttribute('data-title'));
-            var auteur      = normalize(row.getAttribute('data-auteur'));
-            var description = normalize(row.getAttribute('data-description'));
-
-            var matchType = !typeValue || type === typeValue;
-            var matchText = !search
-                || title.includes(search)
-                || auteur.includes(search)
-                || description.includes(search);
-
-            if (matchType && matchText) {
-                row.style.display = '';
-                visible++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        if (noResults) {
-            noResults.classList.toggle('hidden', visible > 0);
-        }
-    }
-
-    if (searchInput) searchInput.addEventListener('input', applyFilters);
-    if (typeFilter)  typeFilter.addEventListener('change', applyFilters);
-
-    if (resetButton) {
-        resetButton.addEventListener('click', function () {
-            searchInput.value = '';
-            typeFilter.value  = '';
-            applyFilters();
-        });
-    }
-}());
+function resetFiltres() {
+    document.getElementById("filtreType").value  = "";
+    document.getElementById("filtreTexte").value = "";
+    filtrer();
+}

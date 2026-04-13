@@ -1,84 +1,59 @@
 package fr.turgot;
 
+import java.io.IOException;
+
 import fr.turgot.dao.UserDAO;
-import fr.turgot.dao.model.Etudiant;
 import fr.turgot.utils.LinkHelper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.mindrot.jbcrypt.BCrypt;
 
-import java.io.IOException;
-
-@WebServlet("/register")
+@WebServlet("/RegisterServlet")
 public class RegisterServlet extends HttpServlet {
 
-    private final UserDAO userDAO = new UserDAO();
+    public static final String JSP_ROOT_FORM = LinkHelper.JSP_ROOT + "formulaire/";
+    public static final String JSP_ROOT_AUTH = LinkHelper.JSP_ROOT + "authentification/";
+    private final UserDAO dao = new UserDAO();
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        req.getRequestDispatcher(LinkHelper.REGISTER_VIEW).forward(req, resp);
-    }
+        String login = request.getParameter("username");
+        String mdp = request.getParameter("password");
+        StringBuilder messageErreur = new StringBuilder();
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
+        if (login == null || login.trim().isEmpty()) {
+            messageErreur.append("Login manquant.<br>");
+        }
+        if (mdp == null || mdp.trim().isEmpty()) {
+            messageErreur.append("Mot de passe manquant.<br>");
+        }
 
-        String username       = req.getParameter("username");
-        String password       = req.getParameter("password");
-        String confirmPassword = req.getParameter("confirmPassword");
-        String numeroEtudiant = req.getParameter("numeroEtudiant");
-        String filiere        = req.getParameter("filiere");
-
-        // Validation basique
-        if (isBlank(username) || isBlank(password) || isBlank(confirmPassword)) {
-            req.setAttribute("errorMessage", "Tous les champs obligatoires doivent être remplis.");
-            req.getRequestDispatcher(LinkHelper.REGISTER_VIEW).forward(req, resp);
+        if (messageErreur.length() > 0) {
+            request.setAttribute("errors", messageErreur.toString());
+            getServletContext().getRequestDispatcher(JSP_ROOT_FORM + "register.jsp")
+                            .forward(request, response);
             return;
         }
 
-        if (!password.equals(confirmPassword)) {
-            req.setAttribute("errorMessage", "Les mots de passe ne correspondent pas.");
-            req.setAttribute("lastUsername", username);
-            req.getRequestDispatcher(LinkHelper.REGISTER_VIEW).forward(req, resp);
+        if (dao.userExists(login)) {
+            request.setAttribute("error", "Ce nom d'utilisateur est déjà pris");
+            getServletContext().getRequestDispatcher(JSP_ROOT_FORM + "register.jsp")
+                            .forward(request, response);
             return;
         }
 
-        if (password.length() < 6) {
-            req.setAttribute("errorMessage", "Le mot de passe doit contenir au moins 6 caractères.");
-            req.setAttribute("lastUsername", username);
-            req.getRequestDispatcher(LinkHelper.REGISTER_VIEW).forward(req, resp);
-            return;
+        boolean success = dao.createUser(login, mdp);
+        if (success) {
+            request.setAttribute("username", login);
+            getServletContext().getRequestDispatcher(JSP_ROOT_FORM + "registersuccess.jsp")
+                            .forward(request, response);
+        } else {
+            request.setAttribute("error", "Erreur lors de la création du compte");
+            getServletContext().getRequestDispatcher(JSP_ROOT_FORM + "register.jsp")
+                            .forward(request, response);
         }
-
-        if (userDAO.usernameExists(username.trim())) {
-            req.setAttribute("errorMessage", "Ce nom d'utilisateur est déjà pris.");
-            req.setAttribute("lastUsername", username);
-            req.getRequestDispatcher(LinkHelper.REGISTER_VIEW).forward(req, resp);
-            return;
-        }
-
-        // Hashage BCrypt
-        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
-
-        Etudiant etudiant = new Etudiant(
-            username.trim(),
-            hashedPassword,
-            numeroEtudiant != null ? numeroEtudiant.trim() : "",
-            filiere        != null ? filiere.trim()        : ""
-        );
-
-        userDAO.save(etudiant);
-
-        // Forward (pas redirect) vers la vue de succès
-        req.setAttribute("newUsername", username.trim());
-        req.getRequestDispatcher(LinkHelper.REGISTER_SUCCESS).forward(req, resp);
-    }
-
-    private boolean isBlank(String s) {
-        return s == null || s.isBlank();
     }
 }
