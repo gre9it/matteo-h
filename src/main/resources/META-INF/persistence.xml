@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+             https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd"
+             version="3.1">
+
+    <persistence-unit name="bibliothequeUnit" transaction-type="RESOURCE_LOCAL">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!-- Entités -->
+        <class>fr.turgot.dao.model.User</class>
+        <class>fr.turgot.dao.model.Etudiant</class>
+        <class>fr.turgot.dao.model.Professeur</class>
+        <class>fr.turgot.dao.model.Bibliothecaire</class>
+        <class>fr.turgot.dao.model.Ressource</class>
+        <class>fr.turgot.dao.model.Livre</class>
+        <class>fr.turgot.dao.model.Document</class>
+        <class>fr.turgot.dao.model.Emprunt</class>
+
+        <properties>
+            <!-- JDBC -->
+            <property name="jakarta.persistence.jdbc.driver"   value="com.mysql.cj.jdbc.Driver"/>
+            <property name="jakarta.persistence.jdbc.url"      value="jdbc:mysql://localhost:3306/bibliotheque?useSSL=false&amp;serverTimezone=UTC&amp;allowPublicKeyRetrieval=true"/>
+            <property name="jakarta.persistence.jdbc.user"     value="root"/>
+            <property name="jakarta.persistence.jdbc.password" value=""/>
+
+            <!-- Hibernate -->
+            <property name="hibernate.dialect"             value="org.hibernate.dialect.MySQLDialect"/>
+            <property name="hibernate.hbm2ddl.auto"        value="update"/>
+            <property name="hibernate.show_sql"            value="true"/>
+            <property name="hibernate.format_sql"          value="true"/>
+            <property name="hibernate.connection.pool_size" value="5"/>
+        </properties>
+    </persistence-unit>
+</persistence>
